@@ -1,24 +1,29 @@
+using System.Diagnostics;
+using System.Reflection;
+
 using FluentValidation;
+
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Hosting.WindowsServices;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
+
 using Serilog;
+
 using Spydersoft.Windows.Dns.Models;
 using Spydersoft.Windows.Dns.Options;
 using Spydersoft.Windows.Dns.Services;
-using System.Diagnostics;
-using System.Reflection;
 
 var options = new WebApplicationOptions
 {
     Args = args,
-    ContentRootPath = WindowsServiceHelpers.IsWindowsService() ? AppContext.BaseDirectory : default
+    ContentRootPath = WindowsServiceHelpers.IsWindowsService() ? AppContext.BaseDirectory : default,
 };
 
 var builder = WebApplication.CreateBuilder(options);
+builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+builder.Configuration.AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true);
+builder.Configuration.AddEnvironmentVariables();
 
 var hostSettings = new HostSettings();
 builder.Configuration.GetSection(HostSettings.SectionName).Bind(hostSettings);
@@ -66,10 +71,6 @@ builder.Services.AddOpenApiDocument(doc =>
     doc.DocumentName = "windows.dns";
     doc.Title = "Windows DNS API";
     doc.Description = "API for interacting with Windows DNS";
-    doc.SerializerSettings = new JsonSerializerSettings
-    {
-        ContractResolver = new CamelCasePropertyNamesContractResolver()
-    };
 });
 
 builder.Host.UseWindowsService();
@@ -79,7 +80,7 @@ var app = builder.Build();
 app.UseOpenApi();
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwaggerUi3();
+    app.UseSwaggerUi();
 }
 
 if (configureAuthentication)
@@ -87,6 +88,8 @@ if (configureAuthentication)
     app.UseAuthentication();
     app.UseAuthorization();
 }
+
+app.Logger.LogInformation("Starting Windows DNS API in {Environment}", app.Environment.EnvironmentName);
 
 app.MapGet("/info", async (ILogger<Program> log) =>
 {
@@ -207,4 +210,4 @@ app.MapDelete("/dns", async (ILogger<Program> log, IDnsService commandService, I
     .Produces(StatusCodes.Status400BadRequest);
 
 
-app.Run();
+await app.RunAsync();
