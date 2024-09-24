@@ -1,5 +1,5 @@
 {
-  "x-generator": "NSwag v13.20.0.0 (NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0))",
+  "x-generator": "NSwag v14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))",
   "openapi": "3.0.0",
   "info": {
     "title": "Windows DNS API",
@@ -66,8 +66,7 @@
         ],
         "operationId": "CreateRecord",
         "requestBody": {
-          "x-name": "DnsRecord",
-          "description": "",
+          "x-name": "record",
           "content": {
             "application/json": {
               "schema": {
@@ -100,8 +99,7 @@
         ],
         "operationId": "DeleteRecord",
         "requestBody": {
-          "x-name": "DnsRecord",
-          "description": "",
+          "x-name": "record",
           "content": {
             "application/json": {
               "schema": {
@@ -134,8 +132,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "nullable": true
+              "type": "string"
             },
             "x-position": 1
           },
@@ -169,6 +166,105 @@
         }
       }
     },
+    "/dns/{hostName}/search": {
+      "get": {
+        "tags": [
+          "DNS"
+        ],
+        "operationId": "SerachRecordsOnHost",
+        "parameters": [
+          {
+            "name": "hostName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "zoneName",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-position": 2
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/DnsRecordType"
+            },
+            "x-position": 3
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-position": 4
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DnsRecord"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/dns/search": {
+      "post": {
+        "tags": [
+          "DNS"
+        ],
+        "operationId": "SerachRecords",
+        "requestBody": {
+          "x-name": "record",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DnsRecord"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DnsRecord"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          }
+        }
+      }
+    },
     "/dns/bulk": {
       "post": {
         "tags": [
@@ -176,8 +272,7 @@
         ],
         "operationId": "CreateDnsRecords",
         "requestBody": {
-          "x-name": "BulkRecordRequest",
-          "description": "",
+          "x-name": "request",
           "content": {
             "application/json": {
               "schema": {
@@ -235,12 +330,14 @@
         "x-enumNames": [
           "A",
           "AAAA",
-          "CNAME"
+          "CNAME",
+          "TXT"
         ],
         "enum": [
           "A",
           "AAAA",
-          "CNAME"
+          "CNAME",
+          "TXT"
         ]
       },
       "BulkRecordRequest": {

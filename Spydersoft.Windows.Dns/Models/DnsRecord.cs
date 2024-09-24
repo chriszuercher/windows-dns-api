@@ -2,6 +2,12 @@
 {
     public class DnsRecord
     {
+        public DnsRecord(string zoneName, string data, DnsRecordType recordType)
+        {
+            ZoneName = zoneName;
+            RecordType = recordType;
+            Data = data;
+        }
         public DnsRecord(string zoneName, string hostName, DnsRecordType recordType, string data)
         {
             ZoneName = zoneName;

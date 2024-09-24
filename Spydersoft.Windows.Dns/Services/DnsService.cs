@@ -1,7 +1,9 @@
-﻿using Microsoft.Extensions.Options;
+﻿using System.Management.Automation;
+
+using Microsoft.Extensions.Options;
+
 using Spydersoft.Windows.Dns.Models;
 using Spydersoft.Windows.Dns.Options;
-using System.Management.Automation;
 
 namespace Spydersoft.Windows.Dns.Services
 {
@@ -11,7 +13,7 @@ namespace Spydersoft.Windows.Dns.Services
 
         private const string GetDnsRecordTemplate = "Get-DnsServerResourceRecord -zonename {0} -ComputerName {1} -Name {2} {3}";
 
-        private const string DnsRecordExpansion = " | Select-Object HostName, RecordType, @{l=\"IPv4Address\";e={$_.RecordData.IPv4Address}}, @{l=\"HostNameAlias\";e={$_.RecordData.HostNameAlias}}, @{l=\"IPv6Address\";e={$_.RecordData.IPv6Address}}";
+        private const string DnsRecordExpansion = " | Select-Object HostName, RecordType, @{l=\"IPv4Address\";e={$_.RecordData.IPv4Address}}, @{l=\"HostNameAlias\";e={$_.RecordData.HostNameAlias}}, @{l=\"IPv6Address\";e={$_.RecordData.IPv6Address}}, @{l=\"DescriptiveText\";e={$_.RecordData.DescriptiveText}}";
 
         private const string CreateDnsARecordTemplate = "Add-DnsServerResourceRecordA -Name \"{2}\" -zoneName {0} -allowupdateany -Ipv4Address \"{3}\" -ComputerName {1}";
 
@@ -19,11 +21,15 @@ namespace Spydersoft.Windows.Dns.Services
 
         private const string CreateDnsCNAMERecordTemplate = "Add-DnsServerResourceRecordA -Name \"{2}\" -zoneName {0} -allowupdateany -HostNameAlias \"{3}\" -ComputerName {1}";
 
+        private const string CreateDnsTXTRecordTemplate = "Add-DnsServerResourceRecordA -Name \"{2}\" -zoneName {0}  -Txt -DescriptiveText \"{3}\" -ComputerName {1}";
+
         private const string GetDnsARecordTemplate = "Get-DnsServerResourceRecord -zonename {0} -ComputerName {1} -name {2} -RRType A | ? {{$_.RecordData.IPv4Address -eq \"{3}\"}}";
 
         private const string GetDnsAAAARecordTemplate = "Get-DnsServerResourceRecord -zonename {0} -ComputerName {1} -name {2} -RRType AAAA | ? {{$_.RecordData.IPv6Address -eq \"{3}\"}}";
 
         private const string GetDnsCNAMERecordTemplate = "Get-DnsServerResourceRecord -zonename {0} -ComputerName {1} -name {2} -RRType CNAME | ? {{$_.RecordData.HostNameAlias -eq \"{3}\"}}";
+
+        private const string GetDnsTXTRecordTemplate = "Get-DnsServerResourceRecord -zonename {0} -ComputerName {1} -name {2} -RRType TXT";
 
         private const string DeleteDnsRecordTemplate = "{2} | Remove-DnsServerResourceRecord -zonename {0} -computername {1} -Force";
 
@@ -97,7 +103,7 @@ namespace Spydersoft.Windows.Dns.Services
             try
             {
                 var pipelineObjects = await _executor.ExecuteCommandAndGetPipeline(command);
-                _logger.LogDebug("Found {objects} objects", pipelineObjects.Count);
+                _logger.LogDebug("Found {Objects} objects", pipelineObjects.Count);
                 if (pipelineObjects.Count == 0)
                 {
                     return null;
@@ -125,7 +131,7 @@ namespace Spydersoft.Windows.Dns.Services
                               DnsRecordExpansion;
 
                 var pipelineObjects = await _executor.ExecuteCommandAndGetPipeline(command);
-                _logger.LogDebug("Found {objects} objects", pipelineObjects.Count);
+                _logger.LogDebug("Found {Objects} objects", pipelineObjects.Count);
                 var dnsRecords = pipelineObjects.Select(record => BuildDnsRecordFromObject(zone, record));
 
                 return dnsRecords;
@@ -145,7 +151,7 @@ namespace Spydersoft.Windows.Dns.Services
             try
             {
                 var pipelineObjects = await _executor.ExecuteCommandAndGetPipeline(string.Format(GetDnsRecordTemplate, zone, _dnsOptions.DnsServerName, hostName, DnsRecordExpansion));
-                _logger.LogDebug("Found {objects} objects", pipelineObjects.Count);
+                _logger.LogDebug("Found {Objects} objects", pipelineObjects.Count);
                 if (pipelineObjects.Count == 0)
                 {
                     return null;
@@ -166,21 +172,30 @@ namespace Spydersoft.Windows.Dns.Services
         private string GetRecordQueryCommandForRecord(DnsRecord record, bool expand)
         {
             string template = "";
+            var command = "";
             switch (record.RecordType)
             {
                 case DnsRecordType.A:
                     template = GetDnsARecordTemplate;
+                    command = !string.IsNullOrWhiteSpace(template) ? string.Format(template, record.ZoneName, _dnsOptions.DnsServerName, record.HostName, record.Data) : string.Empty;
                     break;
 
                 case DnsRecordType.AAAA:
                     template = GetDnsAAAARecordTemplate;
+                    command = !string.IsNullOrWhiteSpace(template) ? string.Format(template, record.ZoneName, _dnsOptions.DnsServerName, record.HostName, record.Data) : string.Empty;
                     break;
 
                 case DnsRecordType.CNAME:
                     template = GetDnsCNAMERecordTemplate;
+                    command = !string.IsNullOrWhiteSpace(template) ? string.Format(template, record.ZoneName, _dnsOptions.DnsServerName, record.HostName, record.Data) : string.Empty;
+                    break;
+
+                case DnsRecordType.TXT:
+                    template = GetDnsTXTRecordTemplate;
+                    command = !string.IsNullOrWhiteSpace(template) ? string.Format(template, record.ZoneName, _dnsOptions.DnsServerName, record.Data) : string.Empty;
                     break;
             }
-            var command = !string.IsNullOrWhiteSpace(template) ? string.Format(template, record.ZoneName, _dnsOptions.DnsServerName, record.HostName, record.Data) : string.Empty;
+
             if (expand)
             {
                 command += DnsRecordExpansion;
@@ -203,6 +218,10 @@ namespace Spydersoft.Windows.Dns.Services
                 case DnsRecordType.CNAME:
                     template = CreateDnsCNAMERecordTemplate;
                     break;
+
+                case DnsRecordType.TXT:
+                    template = CreateDnsTXTRecordTemplate;
+                    break;
             }
             return !string.IsNullOrWhiteSpace(template) ? string.Format(template, record.ZoneName, _dnsOptions.DnsServerName, record.HostName, record.Data) : string.Empty;
         }
@@ -223,6 +242,9 @@ namespace Spydersoft.Windows.Dns.Services
                     break;
                 case DnsRecordType.CNAME:
                     dataProperty = "HostNameAlias";
+                    break;
+                case DnsRecordType.TXT:
+                    dataProperty = "DescriptiveText";
                     break;
 
             }

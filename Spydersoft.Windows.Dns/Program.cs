@@ -127,7 +127,7 @@ app.MapGet("/dns",
 
 app.MapGet("/dns/{hostName}", async (ILogger<Program> log, IDnsService commandService, [FromRoute] string hostName, [FromQuery] string? zoneName) =>
     {
-        log.LogInformation("Fielding DNS Record Request for  {hostName} in zone {zoneName}", hostName, zoneName);
+        log.LogInformation("Fielding DNS Record Request for  {HostName} in zone {ZoneName}", hostName, zoneName);
         var dnsRecord = await commandService.GetRecordsByHostname(hostName, zoneName);
         return dnsRecord == null ? Results.NotFound() : Results.Ok(dnsRecord);
     })
@@ -136,6 +136,32 @@ app.MapGet("/dns/{hostName}", async (ILogger<Program> log, IDnsService commandSe
     .WithTags("DNS")
     .Produces<IEnumerable<DnsRecord>>()
     .Produces(StatusCodes.Status404NotFound);
+
+app.MapGet("/dns/{hostName}/search", async (ILogger<Program> log, IDnsService commandService, [FromRoute] string hostName, [FromQuery] string zoneName, [FromQuery] DnsRecordType type, [FromQuery] string name) =>
+    {
+        log.LogInformation("Searching DNS Record Request");
+        var searchRecord = new DnsRecord(zoneName, name, type);
+        var dnsRecord = await commandService.GetRecord(searchRecord);
+        return dnsRecord == null ? Results.NotFound() : Results.Ok(dnsRecord);
+    })
+    .WithName("SerachRecordsOnHost")
+    .WithDisplayName("Find DNS Records based on Host Name and Zone")
+    .WithTags("DNS")
+    .Produces<IEnumerable<DnsRecord>>()
+    .Produces(StatusCodes.Status404NotFound);
+
+app.MapPost("/dns/search", async (ILogger<Program> log, IDnsService commandService, [FromBody] DnsRecord record) =>
+{
+    log.LogInformation("Searching DNS Record Request for HostName: {HostName}, ZoneName: {ZoneName}", record.HostName, record.ZoneName);
+    var dnsRecord = await commandService.GetRecord(record);
+    return dnsRecord == null ? Results.NotFound() : Results.Ok(dnsRecord);
+})
+.WithName("SerachRecords")
+.WithDisplayName("Find DNS Records based on Host Name and Zone")
+.WithTags("DNS")
+.Produces<DnsRecord>()
+.Produces(StatusCodes.Status404NotFound);
+
 
 app.MapPost("/dns",
         async (ILogger<Program> log, IDnsService commandService, IValidator<DnsRecord> validator,

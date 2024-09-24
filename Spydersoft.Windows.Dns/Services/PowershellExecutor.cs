@@ -14,7 +14,7 @@ namespace Spydersoft.Windows.Dns.Services
 
         public async Task<PSDataCollection<PSObject>> ExecuteCommandAndGetPipeline(string command)
         {
-            _log.LogInformation("Executing Powershell Command: {command}", command);
+            _log.LogInformation("Executing Powershell Command: {Command}", command);
             PSDataCollection<PSObject> pipeline;
             PowerShell ps = PrepareShell();
             try
@@ -23,7 +23,7 @@ namespace Spydersoft.Windows.Dns.Services
                 pipeline = await ps.InvokeAsync().ConfigureAwait(false);
                 if (ps.HadErrors)
                 {
-                    _log.LogError(ps.Streams.Error[0].Exception, "Error Executing Command {command}:{error}",
+                    _log.LogError(ps.Streams.Error[0].Exception, "Error Executing Command {Command}:{Error}",
                         command, ps.Streams.Error[0].ErrorDetails);
                 }
             }
@@ -64,7 +64,7 @@ namespace Spydersoft.Windows.Dns.Services
         {
             if (ps.HadErrors)
             {
-                _log.LogWarning("Executed with {errors} errors", ps.Streams.Error.Count);
+                _log.LogWarning("Executed with {Errors} errors", ps.Streams.Error.Count);
                 _log.LogError(ps.Streams.Error[0].Exception, "Powershell Error");
             }
 

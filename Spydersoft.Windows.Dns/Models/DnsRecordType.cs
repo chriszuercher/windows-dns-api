@@ -7,6 +7,7 @@ namespace Spydersoft.Windows.Dns.Models
     {
         A,
         AAAA,
-        CNAME
+        CNAME,
+        TXT
     }
 }
